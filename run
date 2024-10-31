@@ -1,0 +1,36 @@
+#!/bin/sh
+
+set -u
+
+config=$(cat -)
+file=$(echo "$config" | jq -r '."source"')
+resources=$(echo "$config" | jq -r '."resources"')
+workdir=$(echo "$config" | jq -r '."workdir"')
+language=$(echo "$config" | jq -r '."natural_language"')
+
+title="Nextflow"
+if [ "$language" = "nl" ]; then
+  empty="Lege oplossing"
+  run_fail="Nextflow run is gefaald"
+else
+  empty="Empty submission"
+  run_fail="Nextflow run failed"
+fi
+
+echo '{ "command": "start-judgement" }'
+echo "{ \"command\": \"start-tab\", \"title\": \"$title\" }"
+
+if [ -s "$file" ]; then
+  nextflow-linter -report=json:stdout -rulesetfiles=rulesets/general.xml -includes='**/*.nf' -includes="$file" | jq --compact-output '.packages[].files[].violations[] | .command = "annotate-code" | .column = 0 | .row = .lineNumber | .text = .message | .type = if .priority == 1 then "error" elif .priority == 2 then "warning" else "info" end | del(.ruleName, .priority, .lineNumber, .sourceLine, .message)'
+  if ! err=$(nextflow -quiet run "$file" 2>&1 > /dev/null); then
+    jq --null-input --compact-output \
+      --arg description "$err" \
+      '{ "command": "append-message", "message": { "format": "callout-danger", "description": $description } }'
+    echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$run_fail\" } }"
+  fi
+else
+  echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$empty\" } } "
+fi
+
+echo '{ "command": "close-tab" }'
+echo '{ "command": "close-judgement" }'
