@@ -21,9 +21,12 @@ echo '{ "command": "start-judgement" }'
 echo "{ \"command\": \"start-tab\", \"title\": \"$title\" }"
 
 if [ -s "$file" ]; then
-  nextflow-linter -report=json:stdout -rulesetfiles=rulesets/general.xml -includes='**/*.nf' -includes="$file" | jq --compact-output '.packages[].files[].violations[] | .command = "annotate-code" | .column = 0 | .row = .lineNumber | .text = .message | .type = if .priority == 1 then "error" elif .priority == 2 then "warning" else "info" end | del(.ruleName, .priority, .lineNumber, .sourceLine, .message)'
+  linter_out=$(mktemp)
+  nextflow-linter -report="json:$linter_out" -rulesetfiles=rulesets/general.xml -includes='**/*.nf' -includes="$file" > /dev/null
+  jq --compact-output --monochrome-output '.packages[].files[].violations[] | .command = "annotate-code" | .column = 0 | .row = .lineNumber | .text = .message | .type = if .priority == 1 then "error" elif .priority == 2 then "warning" else "info" end | del(.ruleName, .priority, .lineNumber, .sourceLine, .message)' "$linter_out"
+  rm "$linter_out"
   if ! err=$(nextflow -quiet run "$file" 2>&1 > /dev/null); then
-    jq --null-input --compact-output \
+    jq --null-input --compact-output --monochrome-output \
       --arg description "$err" \
       '{ "command": "append-message", "message": { "format": "callout-danger", "description": $description } }'
     echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$run_fail\" } }"
