@@ -12,9 +12,13 @@ title="Nextflow"
 if [ "$language" = "nl" ]; then
   empty="Lege oplossing"
   run_fail="Nextflow run is gefaald"
+  file_not_found="Bestand is niet gevonden"
+  dir_not_found="Folder is niet gevonden"
 else
   empty="Empty submission"
   run_fail="Nextflow run failed"
+  file_not_found="File not found"
+  dir_not_found="Directory not found"
 fi
 
 echo '{ "command": "start-judgement" }'
@@ -30,6 +34,36 @@ if [ -s "$file" ]; then
       --arg description "$err" \
       '{ "command": "append-message", "message": { "format": "callout-danger", "description": $description } }'
     echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$run_fail\" } }"
+  fi
+
+  filename="$resources/files.json"
+  if [ -f "$filename" ]; then
+    echo '{ "command": "close-tab" }'
+    echo "{ \"command\": \"start-tab\", \"title\": \"Files\" }"
+    jq --compact-output '.[]' "$filename" | while read -r fileinfo; do
+      type=$(echo "$fileinfo" | jq -r '."type"')
+      path="$workdir/$(echo "$fileinfo" | jq -r '."path"')"
+      echo '{ "command": "start-context" }'
+      echo "{ \"command\": \"start-testcase\", \"description\": \"$path\" }"
+      if [ "$type" = "file" ]; then
+        echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
+        if [ -f "$path" ]; then
+          echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
+        else
+          echo "{ \"command\": \"close-test\", \"generated\": \"\", \"status\": { \"enum\": \"wrong\", \"human\": \"$file_not_found\" } }"
+        fi
+
+      elif [ "$type" = "directory" ]; then
+        echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
+        if [ -d "$path" ]; then
+          echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
+        else
+          echo "{ \"command\": \"close-test\", \"generated\": \"\", \"status\": { \"enum\": \"wrong\", \"human\": \"$dir_not_found\" } }"
+        fi
+      fi
+      echo '{ "command": "close-testcase" }'
+      echo '{ "command": "close-context" }'
+    done
   fi
 else
   echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$empty\" } } "
