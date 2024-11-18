@@ -14,11 +14,15 @@ if [ "$language" = "nl" ]; then
   run_fail="Nextflow run is gefaald"
   file_not_found="Bestand is niet gevonden"
   dir_not_found="Folder is niet gevonden"
+  file_check="Bestaan van bestand controleren"
+  directory_check="Bestaan van folder controleren"
 else
   empty="Empty submission"
   run_fail="Nextflow run failed"
   file_not_found="File not found"
   dir_not_found="Directory not found"
+  file_check="Checking file existence"
+  directory_check="Checking directory existence"
 fi
 
 echo '{ "command": "start-judgement" }'
@@ -49,24 +53,26 @@ if [ -s "$file" ]; then
       type=$(echo "$fileinfo" | jq -r '."type"')
       path="$workdir/$(echo "$fileinfo" | jq -r '."path"')"
       echo '{ "command": "start-context" }'
-      echo "{ \"command\": \"start-testcase\", \"description\": \"$path\" }"
       if [ "$type" = "file" ]; then
+        echo "{ \"command\": \"start-testcase\", \"description\": \"$file_check\" }"
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
         if [ -f "$path" ]; then
           echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
         else
           echo "{ \"command\": \"close-test\", \"generated\": \"\", \"status\": { \"enum\": \"wrong\", \"human\": \"$file_not_found\" } }"
         fi
+        echo '{ "command": "close-testcase" }'
 
       elif [ "$type" = "directory" ]; then
+        echo "{ \"command\": \"start-testcase\", \"description\": \"$directory_check\" }"
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
         if [ -d "$path" ]; then
           echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
         else
           echo "{ \"command\": \"close-test\", \"generated\": \"\", \"status\": { \"enum\": \"wrong\", \"human\": \"$dir_not_found\" } }"
         fi
+        echo '{ "command": "close-testcase" }'
       fi
-      echo '{ "command": "close-testcase" }'
       echo '{ "command": "close-context" }'
     done
   fi
