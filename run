@@ -39,6 +39,7 @@ if [ -s "$file" ]; then
   fi
 
   if ! err=$(nextflow -quiet run "$file" 2> /dev/null); then
+    err=$(echo "$err" | sed "s|$file|<code>|")
     jq --null-input --compact-output --monochrome-output \
       --arg description "$err" \
       '{ "command": "append-message", "message": { "format": "callout-danger", "description": $description } }'
