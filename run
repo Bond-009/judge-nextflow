@@ -38,7 +38,7 @@ if [ -s "$file" ]; then
     export PATH="$resources/bin:$PATH"
   fi
 
-  if ! err=$(nextflow -quiet run "$file" 2>&1 > /dev/null); then
+  if ! err=$(nextflow -quiet run "$file" 2> /dev/null); then
     jq --null-input --compact-output --monochrome-output \
       --arg description "$err" \
       '{ "command": "append-message", "message": { "format": "callout-danger", "description": $description } }'
