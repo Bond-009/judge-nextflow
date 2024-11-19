@@ -39,7 +39,12 @@ if [ -s "$file" ]; then
   fi
 
   if ! err=$(nextflow -quiet run "$file" 2> /dev/null); then
+    # strip out submission filename
     err=$(echo "$err" | sed "s|$file|<code>|")
+    # annotate code with the error if possible
+    echo "$err" \
+      | sed -nE 's/^.+cause: ([^"]+) @ line ([0-9]+), column ([0-9]+).+$/{ "text": "\1", "row": \2, "column": \3 }/p' \
+      | jq '. | .command = "annotate-code" | .row -=1 | .type = "error"'
     jq --null-input --compact-output --monochrome-output \
       --arg description "$err" \
       '{ "command": "append-message", "message": { "format": "callout-danger", "description": $description } }'
