@@ -7,6 +7,7 @@ file=$(echo "$config" | jq -r '."source"')
 resources=$(echo "$config" | jq -r '."resources"')
 workdir=$(echo "$config" | jq -r '."workdir"')
 language=$(echo "$config" | jq -r '."natural_language"')
+nextflow_arguments=$(echo "$config" | jq -r '."nextflow_arguments"')
 
 title="Nextflow"
 if [ "$language" = "nl" ]; then
@@ -38,7 +39,7 @@ if [ -s "$file" ]; then
     export PATH="$resources/bin:$PATH"
   fi
 
-  if ! err=$(nextflow -quiet run "$file"); then
+  if ! err=$(nextflow -quiet run "$file" $nextflow_arguments); then
     # strip out submission filename
     err=$(echo "$err" | sed "s|$file|<code>|")
     # annotate code with the error if possible
