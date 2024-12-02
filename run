@@ -38,7 +38,7 @@ if [ -s "$file" ]; then
     export PATH="$resources/bin:$PATH"
   fi
 
-  if ! err=$(nextflow -quiet run "$file" 2> /dev/null); then
+  if ! err=$(nextflow -quiet run "$file"); then
     # strip out submission filename
     err=$(echo "$err" | sed "s|$file|<code>|")
     # annotate code with the error if possible
